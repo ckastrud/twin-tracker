@@ -7,42 +7,169 @@
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; }
-    #map { width: 100%; height: 100vh; }
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+    #sidebar {
+      width: 250px;
+      padding: 10px;
+      overflow-y: auto;
+      background: #f7f7f7;
+      border-right: 1px solid #ddd;
+    }
+    #map {
+      flex-grow: 1;
+    }
+    .place-item {
+      margin: 10px 0;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    .place-item:hover {
+      background-color: #ddd;
+    }
+    form {
+      margin-top: 20px;
+    }
+    input, select {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 4px;
+    }
   </style>
 </head>
 <body>
+
+<div id="sidebar">
+  <h3>Places</h3>
+  <div id="place-list"></div>
+
+  <form id="place-form">
+    <h4>Add a Place</h4>
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="text" id="lat" placeholder="Latitude" required />
+    <input type="text" id="lng" placeholder="Longitude" required />
+    <input type="text" id="description" placeholder="Description" />
+    <input type="text" id="photo" placeholder="Photo URL (optional)" />
+    <select id="category">
+      <option value="food">Food</option>
+      <option value="hike">Hike</option>
+      <option value="bar">Bar</option>
+    </select>
+    <button type="submit">Add</button>
+  </form>
+</div>
 
 <div id="map"></div>
 
 <script>
   mapboxgl.accessToken = 'pk.eyJ1IjoiY2thc3RydWQyNCIsImEiOiJjbWJ4ejJtZDcxNTBzMmxvc28xeWo2MXd6In0.Qu5oOcb3phQLS4OsWSg87A';
+
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v11', // You can try other styles
-    center: [-71.0589, 42.3601], // Start at Boston
+    style: 'mapbox://styles/mapbox/streets-v11',
+    center: [-71.0589, 42.3601], // Boston
     zoom: 10
   });
 
-  // Add a marker example:
   const places = [
     {
       name: "Neptune Oyster",
       coords: [-71.0542, 42.3631],
-      description: "Great lobster roll in Boston!"
+      description: "Great lobster roll in Boston!",
+      photo: "https://www.neptuneoyster.com/images/gallery/food4.jpg",
+      category: "food"
     },
     {
-      name: "Amsterdam Canal",
+      name: "Camelback Hike",
+      coords: [-111.9637, 33.5142],
+      description: "Hot but worth it!",
+      photo: "",
+      category: "hike"
+    },
+    {
+      name: "Prost Amsterdam",
       coords: [4.8952, 52.3702],
-      description: "Walked along the canals in Amsterdam"
+      description: "Cheers in the canals",
+      photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Amsterdam_Canal.jpg/640px-Amsterdam_Canal.jpg",
+      category: "bar"
     }
   ];
 
-  places.forEach(place => {
-    new mapboxgl.Marker()
+  const categoryColors = {
+    food: "#e74c3c",
+    hike: "#2ecc71",
+    bar: "#3498db"
+  };
+
+  function addPlaceToSidebar(place, index) {
+    const item = document.createElement('div');
+    item.className = 'place-item';
+    item.textContent = place.name;
+    item.addEventListener('click', () => {
+      map.flyTo({ center: place.coords, zoom: 14 });
+    });
+    document.getElementById('place-list').appendChild(item);
+  }
+
+  function addMarker(place) {
+    const el = document.createElement('div');
+    el.style.backgroundColor = categoryColors[place.category] || '#999';
+    el.style.width = '16px';
+    el.style.height = '16px';
+    el.style.borderRadius = '50%';
+    el.style.border = '2px solid white';
+
+    const popupHTML = `
+      <h3>${place.name}</h3>
+      <p>${place.description || ''}</p>
+      ${place.photo ? `<img src="${place.photo}" style="width:100%;max-width:200px;" />` : ''}
+    `;
+
+    new mapboxgl.Marker(el)
       .setLngLat(place.coords)
-      .setPopup(new mapboxgl.Popup().setHTML(`<h3>${place.name}</h3><p>${place.description}</p>`))
+      .setPopup(new mapboxgl.Popup().setHTML(popupHTML))
       .addTo(map);
+  }
+
+  function renderPlaces() {
+    document.getElementById('place-list').innerHTML = '';
+    places.forEach((place, index) => {
+      addPlaceToSidebar(place, index);
+      addMarker(place);
+    });
+  }
+
+  // Initial render
+  renderPlaces();
+
+  // Form to add a new place
+  document.getElementById('place-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lng = parseFloat(document.getElementById('lng').value);
+    const description = document.getElementById('description').value;
+    const photo = document.getElementById('photo').value;
+    const category = document.getElementById('category').value;
+
+    const newPlace = {
+      name,
+      coords: [lng, lat],
+      description,
+      photo,
+      category
+    };
+
+    places.push(newPlace);
+    renderPlaces();
+
+    // Reset form
+    document.getElementById('place-form').reset();
   });
 </script>
 
